@@ -397,4 +397,5 @@
     <string name="voice_error_audio_construct">AudioRecord 构造被拒绝：%s</string>
     <string name="voice_error_audio_not_init">AudioRecord 未初始化</string>
     <string name="voice_error_audio_start_failed">开始录音失败：%s</string>
+    <string name="voice_hold_requires_plugin">按住说话需要在「首选语音输入」中选择语音输入插件</string>
 </resources>

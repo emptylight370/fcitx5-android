@@ -5,9 +5,14 @@
 
 package org.fcitx.fcitx5.android.input.keyboard
 
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
+import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
+import org.fcitx.fcitx5.android.R
 import org.fcitx.fcitx5.android.core.CapabilityFlag
 import org.fcitx.fcitx5.android.core.CapabilityFlags
 import org.fcitx.fcitx5.android.core.FcitxAPI
@@ -36,6 +41,7 @@ import org.fcitx.fcitx5.android.input.keyboard.KeyAction.SymAction
 import org.fcitx.fcitx5.android.input.keyboard.KeyAction.UnicodeAction
 import org.fcitx.fcitx5.android.input.keyboard.KeyAction.VoiceInputHoldEnd
 import org.fcitx.fcitx5.android.input.picker.PickerWindow
+import org.fcitx.fcitx5.android.input.voice.VoiceInputAudioCapture
 import org.fcitx.fcitx5.android.input.voice.VoiceInputProviderManager
 import org.fcitx.fcitx5.android.input.wm.InputWindowManager
 import org.fcitx.fcitx5.android.utils.InputMethodUtil
@@ -72,36 +78,87 @@ class CommonKeyActionListener :
 
     private var voiceHoldActive = false
 
-    private fun switchToVoiceInput(): Boolean {
+    /**
+     * "Switch to voice input": jump to a dedicated (system) voice IME.
+     * Always uses the system path — [InputMethodUtil.findVoiceSubtype] prefers
+     * the system IME selected in "Preferred voice input" (a plugin id simply
+     * doesn't match any IME and falls back to the first voice IME).
+     */
+    private fun switchToVoiceIme(): Boolean {
         val isPasswordField = service.currentInputEditorInfo?.let {
             CapabilityFlags.fromEditorInfo(it).has(CapabilityFlag.Password)
         } ?: false
         if (isPasswordField) return false
-        if (VoiceInputProviderManager.isProviderId(preferredVoiceInput)) {
-            return VoiceInputProviderManager.toggle(
-                service = service,
-                id = preferredVoiceInput,
-                onReady = {
-                    VoiceInputProviderManager.voiceReadyCallback?.invoke()
-                },
-                onPartialResult = {},
-                onError = { msg ->
-                    VoiceInputProviderManager.voiceErrorCallback?.invoke(msg)
-                },
-                onLevel = { rms ->
-                    VoiceInputProviderManager.voiceLevelCallback?.invoke(rms)
-                },
-                onFinished = {
-                    VoiceInputProviderManager.voiceFinishedCallback?.invoke()
-                },
-                onStatus = { status ->
-                    VoiceInputProviderManager.voiceStatusCallback?.invoke(status)
-                },
-            )
-        }
         val (id, subtype) = InputMethodUtil.findVoiceSubtype(preferredVoiceInput) ?: return false
         InputMethodUtil.switchInputMethod(service, id, subtype)
         return true
+    }
+
+    /**
+     * "Hold to talk": record inside this IME and feed audio to the AIDL plugin
+     * provider selected in "Preferred voice input". Requires a plugin provider;
+     * the system voice IME cannot support press-and-hold start/stop.
+     */
+    private fun startPluginVoiceInput(): Boolean {
+        val isPasswordField = service.currentInputEditorInfo?.let {
+            CapabilityFlags.fromEditorInfo(it).has(CapabilityFlag.Password)
+        } ?: false
+        if (isPasswordField) return false
+        if (!VoiceInputProviderManager.isProviderId(preferredVoiceInput)) {
+            Toast.makeText(
+                service,
+                service.getString(R.string.voice_hold_requires_plugin),
+                Toast.LENGTH_LONG
+            ).show()
+            return false
+        }
+        // RECORD_AUDIO is a runtime permission; the IME process cannot show
+        // the grant dialog itself, so guide the user to the app info page.
+        if (!VoiceInputAudioCapture.hasPermission(service)) {
+            Toast.makeText(
+                service,
+                service.getString(R.string.voice_error_no_permission),
+                Toast.LENGTH_LONG
+            ).show()
+            runCatching {
+                service.startActivity(
+                    Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                        .setData(Uri.parse("package:${service.packageName}"))
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                )
+            }
+            return false
+        }
+        return VoiceInputProviderManager.toggle(
+            service = service,
+            id = preferredVoiceInput,
+            onReady = {
+                // Feedback: distinguish "plugin session started" from
+                // "switched to a system voice IME"
+                Toast.makeText(
+                    service,
+                    service.getString(R.string.voice_status_listening),
+                    Toast.LENGTH_SHORT
+                ).show()
+                VoiceInputProviderManager.voiceReadyCallback?.invoke()
+            },
+            onPartialResult = {},
+            onError = { msg ->
+                // Fallback toast: voiceErrorCallback may be unset when the
+                // session is triggered from space long-press (no status bar UI)
+                Toast.makeText(service, msg, Toast.LENGTH_SHORT).show()
+                VoiceInputProviderManager.voiceErrorCallback?.invoke(msg)
+            },
+            onLevel = { rms ->
+                VoiceInputProviderManager.voiceLevelCallback?.invoke(rms)
+            },
+            onFinished = {
+                VoiceInputProviderManager.voiceFinishedCallback?.invoke()
+            },
+            onStatus = { status ->
+                VoiceInputProviderManager.voiceStatusCallback?.invoke(status)
+            },
+        )
     }
 
     // there should be a new fcitx API for this
@@ -220,18 +277,21 @@ class CommonKeyActionListener :
                             toggleIme()
                         }
                         SpaceLongPressBehavior.ShowPicker -> showInputMethodPicker()
-                        SpaceLongPressBehavior.VoiceInput -> { switchToVoiceInput() }
+                        SpaceLongPressBehavior.VoiceInput -> { switchToVoiceIme() }
                         SpaceLongPressBehavior.VoiceInputHold -> {
-                            val started = switchToVoiceInput()
-                            if (VoiceInputProviderManager.isProviderId(preferredVoiceInput)) {
-                                voiceHoldActive = started
-                            }
+                            voiceHoldActive = startPluginVoiceInput()
                         }
                     }
                 }
                 is VoiceInputHoldEnd -> {
                     if (voiceHoldActive) {
-                        switchToVoiceInput()
+                        VoiceInputProviderManager.stop(service)
+                        // Feedback: session released, provider is finalizing
+                        Toast.makeText(
+                            service,
+                            service.getString(R.string.voice_status_recognizing),
+                            Toast.LENGTH_SHORT
+                        ).show()
                         voiceHoldActive = false
                     }
                 }

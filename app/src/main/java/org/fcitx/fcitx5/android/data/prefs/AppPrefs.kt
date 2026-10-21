@@ -152,7 +152,13 @@ class AppPrefs(private val sharedPreferences: SharedPreferences) {
             switch(R.string.show_voice_input_button, "show_voice_input_button", false)
         val preferredVoiceInput = voiceInputPreference(
             R.string.preferred_voice_input, "preferred_voice_input", ""
-        ) { showVoiceInputButton.getValue() }
+        ) {
+            showVoiceInputButton.getValue() ||
+                // Also reachable when a voice space long-press behavior is selected,
+                // since hold-to-talk depends on the chosen plugin provider
+                spaceKeyLongPressBehavior.getValue() == SpaceLongPressBehavior.VoiceInput ||
+                spaceKeyLongPressBehavior.getValue() == SpaceLongPressBehavior.VoiceInputHold
+        }
 
         val expandKeypressArea =
             switch(R.string.expand_keypress_area, "expand_keypress_area", false)

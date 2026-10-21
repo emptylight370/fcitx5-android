@@ -64,6 +64,7 @@ import org.fcitx.fcitx5.android.input.keyboard.CustomGestureView
 import org.fcitx.fcitx5.android.input.keyboard.KeyboardWindow
 import org.fcitx.fcitx5.android.input.popup.PopupComponent
 import org.fcitx.fcitx5.android.input.status.StatusAreaWindow
+import org.fcitx.fcitx5.android.input.voice.VoiceInputAudioCapture
 import org.fcitx.fcitx5.android.input.voice.VoiceInputProviderManager
 import org.fcitx.fcitx5.android.input.wm.InputWindow
 import org.fcitx.fcitx5.android.input.wm.InputWindowManager
@@ -259,6 +260,23 @@ class KawaiiBarComponent : UniqueViewComponent<KawaiiBarComponent, FrameLayout>(
 
     private val switchToVoiceInputCallback = View.OnClickListener {
         if (VoiceInputProviderManager.isProviderId(preferredVoiceInput)) {
+            // RECORD_AUDIO is a runtime permission; guide the user to the app
+            // info page when it is not granted yet.
+            if (!VoiceInputAudioCapture.hasPermission(service)) {
+                android.widget.Toast.makeText(
+                    service,
+                    service.getString(R.string.voice_error_no_permission),
+                    android.widget.Toast.LENGTH_LONG
+                ).show()
+                runCatching {
+                    service.startActivity(
+                        android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                            .setData(android.net.Uri.parse("package:${service.packageName}"))
+                            .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                    )
+                }
+                return@OnClickListener
+            }
             VoiceInputProviderManager.toggle(
                 service = service,
                 id = preferredVoiceInput,

@@ -397,4 +397,5 @@
     <string name="voice_error_audio_construct">AudioRecord construct denied: %s</string>
     <string name="voice_error_audio_not_init">AudioRecord not initialized</string>
     <string name="voice_error_audio_start_failed">startRecording failed: %s</string>
+    <string name="voice_hold_requires_plugin">Hold-to-talk requires a voice input plugin selected in "Preferred voice input"</string>
 </resources>
