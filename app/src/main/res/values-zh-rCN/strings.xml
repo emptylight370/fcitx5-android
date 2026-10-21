@@ -373,4 +373,28 @@
     <string name="update_token_cleared">令牌已清除</string>
     <string name="update_token_status_empty">未配置令牌（匿名请求）</string>
     <string name="update_token_status_set">已配置令牌</string>
+
+    <!-- 语音输入（AIDL 插件桥接） -->
+    <string name="space_behavior_voice_input">切换到语音输入</string>
+    <string name="space_behavior_voice_input_hold">按住说话</string>
+    <string name="voice_status_connecting">连接中…</string>
+    <string name="voice_status_opening">启动中…</string>
+    <string name="voice_status_loading">加载中…</string>
+    <string name="voice_status_floating_ready">就绪</string>
+    <string name="voice_status_recognizing">识别中</string>
+    <string name="voice_status_listening">聆听中</string>
+    <string name="voice_status_committed">完成</string>
+    <string name="voice_error_no_permission">未授予录音权限</string>
+    <string name="voice_error_failed">语音输入失败</string>
+    <string name="voice_error_invalid_provider">无效的语音输入提供者</string>
+    <string name="voice_error_not_available">语音输入提供者不可用</string>
+    <string name="voice_error_disconnected">语音输入提供者已断开连接</string>
+    <string name="voice_error_null_binding">语音输入提供者返回空绑定</string>
+    <string name="voice_error_cannot_bind">无法绑定语音输入提供者</string>
+    <string name="voice_error_bind_timeout">语音输入提供者绑定超时</string>
+    <string name="voice_error_call_failed">调用语音输入提供者失败</string>
+    <string name="voice_error_audio_minbuf">AudioRecord.getMinBufferSize=%d</string>
+    <string name="voice_error_audio_construct">AudioRecord 构造被拒绝：%s</string>
+    <string name="voice_error_audio_not_init">AudioRecord 未初始化</string>
+    <string name="voice_error_audio_start_failed">开始录音失败：%s</string>
 </resources>

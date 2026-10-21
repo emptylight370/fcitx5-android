@@ -172,6 +172,12 @@ abstract class BaseKeyboard(
                                 true
                             }
                         }
+                        GestureType.Up -> {
+                            // Notify end of "hold to talk" voice input (only consumed
+                            // when space long-press behavior is VoiceInputHold)
+                            onAction(KeyAction.VoiceInputHoldEnd)
+                            false
+                        }
                         else -> false
                     }
                 }

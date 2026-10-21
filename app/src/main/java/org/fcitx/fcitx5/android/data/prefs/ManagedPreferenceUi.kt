@@ -14,6 +14,7 @@ import org.fcitx.fcitx5.android.ui.main.modified.MySwitchPreference
 import org.fcitx.fcitx5.android.ui.main.settings.DialogSeekBarPreference
 import org.fcitx.fcitx5.android.ui.main.settings.EditTextIntPreference
 import org.fcitx.fcitx5.android.ui.main.settings.TwinSeekBarPreference
+import org.fcitx.fcitx5.android.input.voice.VoiceInputProviderManager
 import org.fcitx.fcitx5.android.utils.InputMethodUtil
 import org.fcitx.fcitx5.android.utils.includes
 
@@ -86,10 +87,16 @@ abstract class ManagedPreferenceUi<T : Preference>(
             setTitle(this@VoiceInputList.title)
             setDialogTitle(this@VoiceInputList.title)
             val voiceInputMethods = InputMethodUtil.listVoiceInputMethods()
-            entryValues = arrayOf("", *voiceInputMethods.map { it.first.id }.toTypedArray())
+            val pluginProviders = VoiceInputProviderManager.listProviders(context)
+            val systemValues = voiceInputMethods.map { it.first.id }
+            val systemLabels = voiceInputMethods.map { it.first.loadLabel(context.packageManager).toString() }
+            val pluginValues = pluginProviders.map { it.id }
+            val pluginLabels = pluginProviders.map { it.label.toString() }
+            entryValues = arrayOf("", *systemValues.toTypedArray(), *pluginValues.toTypedArray())
             entries = arrayOf(
                 context.getString(R.string.system_default),
-                *voiceInputMethods.map { it.first.loadLabel(context.packageManager) }.toTypedArray()
+                *systemLabels.toTypedArray(),
+                *pluginLabels.toTypedArray(),
             )
             // shows "(Not Available)" if selected id is not present
             summaryProvider = Preference.SummaryProvider<ListPreference> { preference ->

@@ -7,6 +7,10 @@ package org.fcitx.fcitx5.android.input
 
 import android.annotation.SuppressLint
 import android.app.Dialog
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.ActivityInfo
 import android.content.res.ColorStateList
 import android.content.res.Configuration
@@ -15,6 +19,7 @@ import android.graphics.drawable.Icon
 import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
+import android.os.UserManager
 import android.text.InputType
 import android.util.LruCache
 import android.util.Size
@@ -45,6 +50,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.launch
+import org.fcitx.fcitx5.android.BuildConfig
 import org.fcitx.fcitx5.android.R
 import org.fcitx.fcitx5.android.core.CapabilityFlags
 import org.fcitx.fcitx5.android.core.FcitxAPI
@@ -55,6 +61,8 @@ import org.fcitx.fcitx5.android.core.KeyStates
 import org.fcitx.fcitx5.android.core.KeySym
 import org.fcitx.fcitx5.android.core.ScancodeMapping
 import org.fcitx.fcitx5.android.core.SubtypeManager
+import org.fcitx.fcitx5.android.core.TextFormatFlag
+import org.fcitx.fcitx5.android.common.ipc.VoiceInputIpc
 import org.fcitx.fcitx5.android.daemon.FcitxConnection
 import org.fcitx.fcitx5.android.daemon.FcitxDaemon
 import org.fcitx.fcitx5.android.data.InputFeedbacks
@@ -65,6 +73,8 @@ import org.fcitx.fcitx5.android.data.theme.Theme
 import org.fcitx.fcitx5.android.data.theme.ThemeManager
 import org.fcitx.fcitx5.android.input.cursor.CursorRange
 import org.fcitx.fcitx5.android.input.cursor.CursorTracker
+import org.fcitx.fcitx5.android.input.keyboard.SpaceLongPressBehavior
+import org.fcitx.fcitx5.android.input.voice.VoiceInputProviderManager
 import org.fcitx.fcitx5.android.utils.InputMethodUtil
 import org.fcitx.fcitx5.android.utils.alpha
 import org.fcitx.fcitx5.android.utils.forceShowSelf
@@ -119,6 +129,26 @@ class FcitxInputMethodService : LifecycleInputMethodService() {
     }
 
     private var capabilityFlags = CapabilityFlags.DefaultFlags
+
+    private val voiceInputCommitReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            when (intent?.action) {
+                BuildConfig.APPLICATION_ID + VoiceInputIpc.PARTIAL_ACTION_SUFFIX -> {
+                    val text = intent.getStringExtra(VoiceInputIpc.EXTRA_PARTIAL_TEXT).orEmpty()
+                    if (text.isNotBlank()) {
+                        lifecycleScope.launch { setVoiceComposingText(text) }
+                    }
+                }
+                BuildConfig.APPLICATION_ID + VoiceInputIpc.COMMIT_ACTION_SUFFIX -> {
+                    val text = intent.getStringExtra(VoiceInputIpc.EXTRA_COMMIT_TEXT).orEmpty()
+                    if (text.isNotBlank()) {
+                        lifecycleScope.launch { commitVoiceText(text) }
+                        VoiceInputProviderManager.floatingCommitListener?.invoke(text)
+                    }
+                }
+            }
+        }
+    }
 
     private val selection = CursorTracker()
 
@@ -218,6 +248,27 @@ class FcitxInputMethodService : LifecycleInputMethodService() {
         }
         prefs.candidates.registerOnChangeListener(recreateCandidatesViewListener)
         ThemeManager.addOnChangedListener(onThemeChangeListener)
+        val voiceIntentFilter = IntentFilter().apply {
+            addAction(BuildConfig.APPLICATION_ID + VoiceInputIpc.COMMIT_ACTION_SUFFIX)
+            addAction(BuildConfig.APPLICATION_ID + VoiceInputIpc.PARTIAL_ACTION_SUFFIX)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(
+                voiceInputCommitReceiver,
+                voiceIntentFilter,
+                BuildConfig.APPLICATION_ID + ".permission.PLUGIN",
+                null,
+                Context.RECEIVER_EXPORTED,
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            registerReceiver(
+                voiceInputCommitReceiver,
+                voiceIntentFilter,
+                BuildConfig.APPLICATION_ID + ".permission.PLUGIN",
+                null,
+            )
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             postFcitxJob {
                 SubtypeManager.syncWith(enabledIme())
@@ -450,6 +501,41 @@ class FcitxInputMethodService : LifecycleInputMethodService() {
                 commitText(text, 1)
                 setSelection(target, target)
             }
+        }
+    }
+
+    fun setVoiceComposingText(text: String) {
+        val ic = currentInputConnection ?: return
+        if (text.isBlank()) return
+        val start = if (composing.isEmpty()) selection.latest.start else composing.start
+        val formatted = FormattedText(
+            arrayOf(text),
+            intArrayOf(TextFormatFlag.Underline.flag),
+            text.length,
+        )
+        composing.update(start, start + text.length)
+        composingText = formatted
+        selection.predict(composing.end)
+        ic.setComposingText(formatted.toSpannedString(highlightColor), 1)
+    }
+
+    fun clearVoiceComposingText() {
+        val ic = currentInputConnection ?: return
+        if (composing.isEmpty()) return
+        resetComposingState()
+        ic.setComposingText("", 1)
+    }
+
+    fun commitVoiceText(text: String) {
+        val ic = currentInputConnection ?: return
+        if (text.isBlank()) return
+        if (composing.isNotEmpty() && composingText.toString() == text) {
+            selection.predict(composing.start + text.length)
+            resetComposingState()
+            ic.finishComposingText()
+        } else {
+            clearVoiceComposingText()
+            commitText(text)
         }
     }
 
@@ -760,6 +846,7 @@ class FcitxInputMethodService : LifecycleInputMethodService() {
         postFcitxJob {
             focus(true)
         }
+        ensurePreferredVoiceInputProviderAvailable()
         if (inputDeviceMgr.evaluateOnStartInputView(info, this)) {
             // because onStartInputView will always be called after onStartInput,
             // editorInfo and capFlags should be up-to-date
@@ -775,6 +862,19 @@ class FcitxInputMethodService : LifecycleInputMethodService() {
             }
             showStatusIcon(StatusIconMapping.fromEntry(fcitx.runImmediately { inputMethodEntryCached }))
         }
+    }
+
+    private fun ensurePreferredVoiceInputProviderAvailable() {
+        val um = getSystemService(UserManager::class.java)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && um?.isUserUnlocked == false) return
+        val keyboardPrefs = AppPrefs.getInstance().keyboard
+        val voiceInputReachable =
+            keyboardPrefs.showVoiceInputButton.getValue() ||
+                keyboardPrefs.spaceKeyLongPressBehavior.getValue() == SpaceLongPressBehavior.VoiceInput ||
+                keyboardPrefs.spaceKeyLongPressBehavior.getValue() == SpaceLongPressBehavior.VoiceInputHold
+        if (!voiceInputReachable) return
+        val preferredVoiceInput = keyboardPrefs.preferredVoiceInput.getValue()
+        VoiceInputProviderManager.ensureProviderAvailable(this, preferredVoiceInput)
     }
 
     override fun onUpdateSelection(
@@ -1050,6 +1150,9 @@ class FcitxInputMethodService : LifecycleInputMethodService() {
     override fun onFinishInputView(finishingInput: Boolean) {
         Timber.d("onFinishInputView: finishingInput=$finishingInput")
         decorLocationUpdated = false
+        if (VoiceInputProviderManager.isActive()) {
+            VoiceInputProviderManager.stop(this)
+        }
         inputDeviceMgr.onFinishInputView()
         currentInputConnection?.apply {
             finishComposingText()
@@ -1089,6 +1192,7 @@ class FcitxInputMethodService : LifecycleInputMethodService() {
         }
         prefs.candidates.unregisterOnChangeListener(recreateCandidatesViewListener)
         ThemeManager.removeOnChangedListener(onThemeChangeListener)
+        runCatching { unregisterReceiver(voiceInputCommitReceiver) }
         super.onDestroy()
         // Fcitx might be used in super.onDestroy()
         FcitxDaemon.disconnect(javaClass.name)
