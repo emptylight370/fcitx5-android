@@ -13,6 +13,8 @@
 
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- In-app update: download and install APK from GitHub releases -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <!-- remove intent queries merged from library manifest (namely Android-Image-Cropper) -->
     <queries tools:node="removeAll" />
@@ -120,6 +122,27 @@
             android:taskAffinity=".ui.main.ClipboardEditActivity"
             android:theme="@style/Theme.DialogTheme"
             android:windowSoftInputMode="stateAlwaysVisible|adjustPan" />
+
+        <activity
+            android:name=".ui.main.update.UpdateCheckActivity"
+            android:exported="false"
+            android:label="@string/update_page_title" />
+        <activity
+            android:name=".ui.main.update.UpdateTokenSettingsActivity"
+            android:exported="false"
+            android:label="@string/update_token_settings_title" />
+        <activity
+            android:name=".ui.main.update.UpdateHostsSettingsActivity"
+            android:exported="false"
+            android:label="@string/update_hosts_settings_title" />
+        <activity
+            android:name=".ui.main.update.UpdateMirrorListActivity"
+            android:exported="false"
+            android:label="@string/update_mirror_settings_title" />
+        <activity
+            android:name=".ui.main.update.UpdateMirrorEditActivity"
+            android:exported="false"
+            android:label="@string/update_mirror_edit_title" />
 
         <service
             android:name=".input.FcitxInputMethodService"

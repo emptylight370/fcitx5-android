@@ -7,4 +7,9 @@
     <color name="blue_500">#2196F3</color>
     <color name="grey_400">#BDBDBD</color>
     <color name="grey_700">#616161</color>
+
+    <!-- In-app update asset status backgrounds -->
+    <color name="update_asset_downloading_bg">#142196F3</color>
+    <color name="update_asset_finished_bg">#1427AE60</color>
+    <color name="update_asset_failed_bg">#14D50000</color>
 </resources>

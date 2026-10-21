@@ -11,6 +11,7 @@ import org.fcitx.fcitx5.android.BuildConfig
 import org.fcitx.fcitx5.android.R
 import org.fcitx.fcitx5.android.ui.common.PaddingPreferenceFragment
 import org.fcitx.fcitx5.android.ui.main.settings.SettingsRoute
+import org.fcitx.fcitx5.android.ui.main.update.UpdateCheckActivity
 import org.fcitx.fcitx5.android.utils.Const
 import org.fcitx.fcitx5.android.utils.addCategory
 import org.fcitx.fcitx5.android.utils.addPreference
@@ -38,7 +39,9 @@ class AboutFragment : PaddingPreferenceFragment() {
             }
             addCategory(R.string.version) {
                 isIconSpaceReserved = false
-                addPreference(R.string.current_version, Const.versionName)
+                addPreference(R.string.current_version, Const.versionName) {
+                    startActivity(Intent(requireContext(), UpdateCheckActivity::class.java))
+                }
                 addPreference(R.string.build_git_hash, BuildConfig.BUILD_GIT_HASH) {
                     val commit = BuildConfig.BUILD_GIT_HASH.substringBefore('-')
                     val uri = Uri.parse("${Const.githubRepo}/commit/${commit}")
