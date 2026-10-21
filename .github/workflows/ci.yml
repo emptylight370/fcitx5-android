@@ -1,0 +1,195 @@
+name: Commit CI
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - '*'
+    tags-ignore:
+      - '[0-9]*'
+      - 'v[0-9]*'
+    paths:
+      - '**/**'
+      - '!*.md'
+      - '!.gitignore'
+      - '!docs/**'
+
+permissions:
+  contents: write
+
+jobs:
+  build_commit:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - ubuntu-24.04
+        abi:
+          - arm64-v8a
+        build_type:
+          - standard
+          - plugins
+    env:
+      BUILD_ABI: ${{ matrix.abi }}
+      SIGN_KEY_BASE64: ${{ secrets.SIGNING_KEY }}
+      SIGN_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+      SIGN_KEY_PWD: ${{ secrets.KEY_PASSWORD }}
+    steps:
+      - name: Fetch source code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Fetch upstream tags
+        run: |
+          git remote add upstream https://github.com/fcitx5-android/fcitx5-android.git || true
+          git fetch upstream --tags
+
+      - name: Remove non-semver local tags to avoid confusion
+        shell: bash
+        run: |
+          # keep tags like 0.1.2 or v0.1.2 but delete others (nightly/latest/short-sha)
+          git for-each-ref --format='%(refname:strip=2)' refs/tags | while read tag; do
+              # allow v1.2 or v1.2.3.4 etc: one or more dot-separated numeric segments
+              # use POSIX-compatible groups for bash (no (?: ) non-capturing groups)
+              if [[ ! "$tag" =~ ^v?[0-9]+(\.[0-9]+)+(-.*)?$ ]]; then
+              git tag -d "$tag" || true
+            fi
+          done
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Setup Android environment
+        uses: android-actions/setup-android@v4
+        with:
+          packages: cmake;3.31.6
+
+      - name: Install system dependencies
+        run: |
+          sudo apt update
+          sudo apt install extra-cmake-modules gettext
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Build Standard APK
+        if: matrix.build_type == 'standard'
+        run: |
+          ./gradlew :app:assembleRelease
+
+      - name: Build Plugins APK
+        if: matrix.build_type == 'plugins'
+        run: |
+          ./gradlew :assembleReleasePlugins
+
+      - name: Collect plugin APKs
+        if: matrix.build_type == 'plugins'
+        run: |
+          mkdir -p plugin-apks
+          for dir in plugin/*/; do
+            if [ -d "$dir" ]; then
+              if ls "$dir"build/outputs/apk/release/*.apk 1> /dev/null 2>&1; then
+                cp "$dir"build/outputs/apk/release/*.apk plugin-apks/
+              fi
+            fi
+          done
+
+      - name: Upload standard APK
+        if: matrix.build_type == 'standard'
+        uses: actions/upload-artifact@v7
+        with:
+          name: app-standard-${{ matrix.os }}-${{ matrix.abi }}
+          path: app/build/outputs/apk/release/*.apk
+
+      - name: Upload plugin APKs
+        if: matrix.build_type == 'plugins'
+        uses: actions/upload-artifact@v7
+        with:
+          name: plugins-${{ matrix.os }}-${{ matrix.abi }}
+          path: plugin-apks/*.apk
+
+  nightly_release:
+    needs: build_commit
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Fetch source code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Fetch upstream tags
+        run: |
+          git remote add upstream https://github.com/fcitx5-android/fcitx5-android.git || true
+          git fetch upstream --tags
+
+      - name: Save previous release tag
+        id: prev_tag
+        shell: bash
+        run: |
+          tag=$(git describe --tags --abbrev=0 2>/dev/null || echo '')
+          sha=''
+          if [ -n "$tag" ]; then
+            sha=$(git rev-parse "${tag}^{commit}" 2>/dev/null || echo '')
+          fi
+          echo "value=$sha" >> $GITHUB_OUTPUT
+
+      - name: Remove non-semver local tags
+        shell: bash
+        run: |
+          git for-each-ref --format='%(refname:strip=2)' refs/tags | while read tag; do
+            if [[ ! "$tag" =~ ^v?[0-9]+(\.[0-9]+)+(-.*)?$ ]]; then
+              git tag -d "$tag" || true
+            fi
+          done
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v7
+        with:
+          path: release-artifacts
+
+      - name: Collect all APKs
+        run: |
+          mkdir -p final-release
+          find release-artifacts -name "*.apk" -exec cp {} final-release/ \;
+
+      - name: Generate nightly tag
+        id: tag
+        run: echo "value=nightly-$(git describe --tags --long)-$(date -u +'%Y%m%d-%H%M%S')" >> $GITHUB_OUTPUT
+
+      - name: Generate release notes
+        id: notes
+        shell: bash
+        run: |
+          last_tag="${{ steps.prev_tag.outputs.value }}"
+          {
+            echo "## Nightly Build ${{ steps.tag.outputs.value }}"
+            echo ""
+            echo "Commit: \`$(git rev-parse --short HEAD)\`"
+            echo "Built at: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+            echo ""
+            echo "### Changes"
+            echo ""
+            if [ -n "$last_tag" ]; then
+              range="${last_tag}..HEAD"
+            else
+              range="-30"
+            fi
+            git log "$range" --no-merges --pretty=format:'- %s (%h)' | head -n 50 || true
+          } > release_notes.md
+          cat release_notes.md
+
+      - name: Create Nightly release
+        uses: softprops/action-gh-release@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag_name: ${{ steps.tag.outputs.value }}
+          name: "Nightly Build ${{ steps.tag.outputs.value }}"
+          body_path: release_notes.md
+          prerelease: true
+          files: |
+            final-release/*.apk
