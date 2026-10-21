@@ -964,6 +964,22 @@ object VoiceInputProviderManager {
         stopSession(context, keepConnectionWarm = false)
     }
 
+    /**
+     * Gracefully end the active session: drain the pending audio feed queue,
+     * then send [IVoiceInputProvider.endStream] so the provider finalizes and
+     * emits the last segment result. Unlike [stop] (which aborts the session
+     * via stopSession without any final result), this is what hold-to-talk
+     * release should call so the recognized text reaches the input field.
+     */
+    fun endSession(context: Context = appContext) {
+        if (floatingFallbackActive) {
+            stopFloatingFallback(context)
+            return
+        }
+        if (!isActive()) return
+        finish(context)
+    }
+
     private fun stopSession(context: Context = appContext, keepConnectionWarm: Boolean) {
         voiceSessionTerminalized = true
         logI(

@@ -285,7 +285,10 @@ class CommonKeyActionListener :
                 }
                 is VoiceInputHoldEnd -> {
                     if (voiceHoldActive) {
-                        VoiceInputProviderManager.stop(service)
+                        // Gracefully end the session (drain feed queue + endStream)
+                        // so the provider finalizes and commits the last segment;
+                        // stop() would abort the session without any result.
+                        VoiceInputProviderManager.endSession(service)
                         // Feedback: session released, provider is finalizing
                         Toast.makeText(
                             service,

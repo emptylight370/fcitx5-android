@@ -243,7 +243,10 @@ class UpdateCheckActivity : AppCompatActivity() {
                 adapter.setReleaseNotes(notes)
             } catch (t: Throwable) {
                 Timber.w(t, "Failed to fetch release")
-                latestVersionText.text = getString(R.string.update_failed_to_fetch)
+                // Show the underlying reason to distinguish "no releases yet"
+                // from network failures (e.g. GitHub API unreachable)
+                val reason = t.message?.takeIf { it.isNotBlank() } ?: t.toString()
+                latestVersionText.text = getString(R.string.update_failed_to_fetch) + "\n" + reason
                 adapter.setReleaseNotes("")
                 Toast.makeText(
                     this@UpdateCheckActivity,

@@ -48,7 +48,7 @@ object UpdateRepository {
         }
         return withContext(Dispatchers.IO) {
             val hosts = UpdatePrefs.loadHostsConfig(context)
-            val url = URL(Const.updateRepo)
+            val url = URL(Const.githubRepo)
             val owner = url.path.trim('/').split('/').getOrNull(0)
                 ?: throw IOException("Invalid GitHub repo owner")
             val repo = url.path.trim('/').split('/').getOrNull(1)
