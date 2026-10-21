@@ -13,6 +13,8 @@
 
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- In-app update: fetch GitHub releases API and download APKs -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <!-- In-app update: download and install APK from GitHub releases -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <!-- Voice input: IME records audio itself and feeds PCM to plugin providers -->
