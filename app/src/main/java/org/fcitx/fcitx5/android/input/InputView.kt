@@ -8,6 +8,8 @@ package org.fcitx.fcitx5.android.input
 import android.annotation.SuppressLint
 import android.content.res.Configuration
 import android.graphics.Point
+import android.graphics.Rect
+import android.graphics.Region
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.view.MotionEvent
@@ -166,9 +168,6 @@ class InputView(
 
     var isFloating = false
         private set
-
-    // Original height of root view, restored when leaving floating mode
-    private var savedRootHeight = 0
 
     private val isLandscapeOrientation: Boolean
         get() = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -505,11 +504,6 @@ class InputView(
             params.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
             params.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
             params.endToEnd = params.unset
-            // Full height so the keyboard can be dragged anywhere on screen
-            if (savedRootHeight == 0) {
-                savedRootHeight = layoutParams?.height ?: wrapContent
-            }
-            layoutParams?.height = matchParent
             val (storedX, storedY) = getStoredFloatingPosition()
             if (storedX != -1 && storedY != -1) {
                 keyboardView.translationX = storedX.toFloat()
@@ -528,8 +522,6 @@ class InputView(
             preedit.ui.root.translationX = keyboardView.translationX
             preedit.ui.root.translationY = keyboardView.translationY
         } else {
-            layoutParams?.height = if (savedRootHeight > 0) savedRootHeight else wrapContent
-            savedRootHeight = 0
             applyDockedKeyboardState()
         }
         updateFloatingMoveHandle()
@@ -556,6 +548,29 @@ class InputView(
         updateKeyboardSize()
         requestLayout()
         service.window.window?.decorView?.requestLayout()
+    }
+
+    /**
+     * Touchable region of the floating keyboard (keyboard + preedit + move
+     * handle), used by [FcitxInputMethodService.onComputeInsets] with
+     * TOUCHABLE_INSETS_REGION so touches outside the floating keyboard fall
+     * through to the app underneath.
+     */
+    fun getFloatingKeyboardRegion(outRegion: Region) {
+        if (!isFloating) return
+        val rect = Rect()
+        keyboardView.getHitRect(rect)
+        if (preedit.ui.root.visibility == View.VISIBLE) {
+            val preeditRect = Rect()
+            preedit.ui.root.getHitRect(preeditRect)
+            rect.union(preeditRect)
+        }
+        if (floatingMoveHandle.visibility == View.VISIBLE) {
+            val handleRect = Rect()
+            floatingMoveHandle.getHitRect(handleRect)
+            rect.union(handleRect)
+        }
+        outRegion.set(rect)
     }
 
     private fun clampFloatingPosition() {

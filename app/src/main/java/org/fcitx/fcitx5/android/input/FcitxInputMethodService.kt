@@ -688,6 +688,16 @@ class FcitxInputMethodService : LifecycleInputMethodService() {
     private var inputViewLocation = intArrayOf(0, 0)
 
     override fun onComputeInsets(outInsets: Insets) {
+        val inputView = this.inputView
+        if (inputView?.isFloating == true) {
+            // Floating keyboard: the app stays fullscreen (not pushed up),
+            // touches are restricted to the floating keyboard's region
+            outInsets.contentTopInsets = inputView.height
+            outInsets.visibleTopInsets = inputView.height
+            outInsets.touchableInsets = Insets.TOUCHABLE_INSETS_REGION
+            inputView.getFloatingKeyboardRegion(outInsets.touchableRegion)
+            return
+        }
         if (inputDeviceMgr.isVirtualKeyboard) {
             inputView?.keyboardView?.getLocationInWindow(inputViewLocation)
             outInsets.apply {

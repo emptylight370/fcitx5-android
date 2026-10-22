@@ -202,7 +202,7 @@ class AppPrefs(private val sharedPreferences: SharedPreferences) {
         val floatingKeyboardWidthPercentLandscape = int(
             R.string.floating_keyboard_width_percent_landscape,
             "floating_keyboard_width_percent_landscape",
-            90,
+            40,
             30,
             100,
             "%",

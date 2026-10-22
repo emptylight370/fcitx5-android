@@ -132,12 +132,12 @@ class IdleUi(
             centerVertically()
         })
         add(floatingButton, lParams(size, size) {
-            endToStartOf(hideKeyboardButton)
+            endToStartOf(menuButton)
             centerVertically()
         })
         add(animator, lParams(matchConstraints, matchParent) {
-            after(menuButton)
-            before(floatingButton)
+            after(floatingButton)
+            before(hideKeyboardButton)
             centerVertically()
         })
     }
