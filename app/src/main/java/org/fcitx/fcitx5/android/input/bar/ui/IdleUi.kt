@@ -31,6 +31,7 @@ import splitties.views.dsl.constraintlayout.before
 import splitties.views.dsl.constraintlayout.centerVertically
 import splitties.views.dsl.constraintlayout.constraintLayout
 import splitties.views.dsl.constraintlayout.endOfParent
+import splitties.views.dsl.constraintlayout.endToStartOf
 import splitties.views.dsl.constraintlayout.lParams
 import splitties.views.dsl.constraintlayout.matchConstraints
 import splitties.views.dsl.constraintlayout.startOfParent
@@ -46,7 +47,8 @@ class IdleUi(
     override val ctx: Context,
     private val theme: Theme,
     private val popup: PopupComponent,
-    private val commonKeyActionListener: CommonKeyActionListener
+    private val commonKeyActionListener: CommonKeyActionListener,
+    private val floatingToggleCallback: (() -> Unit)? = null
 ) : Ui {
 
     enum class State {
@@ -76,6 +78,12 @@ class IdleUi(
     }
 
     val hideKeyboardButton = ToolButton(ctx, R.drawable.ic_baseline_arrow_drop_down_24, theme)
+
+    val floatingButton = ToolButton(ctx, R.drawable.ic_floating_toggle_24, theme).apply {
+        contentDescription = ctx.getString(R.string.floating_keyboard)
+        setOnClickListener { floatingToggleCallback?.invoke() }
+        visibility = if (floatingToggleCallback != null) View.VISIBLE else View.GONE
+    }
 
     val emptyBar = Space(ctx)
 
@@ -123,9 +131,13 @@ class IdleUi(
             endOfParent()
             centerVertically()
         })
+        add(floatingButton, lParams(size, size) {
+            endToStartOf(hideKeyboardButton)
+            centerVertically()
+        })
         add(animator, lParams(matchConstraints, matchParent) {
             after(menuButton)
-            before(hideKeyboardButton)
+            before(floatingButton)
             centerVertically()
         })
     }

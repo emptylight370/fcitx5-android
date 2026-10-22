@@ -18,6 +18,7 @@ import org.fcitx.fcitx5.android.input.candidates.floating.FloatingCandidatesOrie
 import org.fcitx.fcitx5.android.input.candidates.horizontal.HorizontalCandidateMode
 import org.fcitx.fcitx5.android.input.keyboard.KeyboardHeightPercentBase
 import org.fcitx.fcitx5.android.input.keyboard.LangSwitchBehavior
+import org.fcitx.fcitx5.android.input.FloatingAutoMode
 import org.fcitx.fcitx5.android.input.keyboard.SpaceLongPressBehavior
 import org.fcitx.fcitx5.android.input.keyboard.SwipeSymbolDirection
 import org.fcitx.fcitx5.android.input.picker.PickerWindow
@@ -36,6 +37,14 @@ class AppPrefs(private val sharedPreferences: SharedPreferences) {
         val pid = int("pid", 0)
         val editorInfoInspector = bool("editor_info_inspector", false)
         val needNotifications = bool("need_notifications", true)
+
+        // Floating keyboard state (ported from fx, simplified)
+        val floatingModeEnabled = bool("floating_mode_enabled", false)
+        // Last floating position, as ratio of screen size per orientation; -1 = unset
+        val floatingKeyboardXPortraitRatio = float("floating_keyboard_x_portrait_ratio", -1f)
+        val floatingKeyboardYPortraitRatio = float("floating_keyboard_y_portrait_ratio", -1f)
+        val floatingKeyboardXLandscapeRatio = float("floating_keyboard_x_landscape_ratio", -1f)
+        val floatingKeyboardYLandscapeRatio = float("floating_keyboard_y_landscape_ratio", -1f)
     }
 
     inner class Advanced : ManagedPreferenceCategory(R.string.advanced, sharedPreferences) {
@@ -180,6 +189,29 @@ class AppPrefs(private val sharedPreferences: SharedPreferences) {
             R.string.space_long_press_behavior,
             "space_long_press_behavior",
             SpaceLongPressBehavior.None
+        )
+        val floatingKeyboardWidthPercentPortrait = int(
+            R.string.floating_keyboard_width_percent_portrait,
+            "floating_keyboard_width_percent_portrait",
+            80,
+            30,
+            100,
+            "%",
+            5
+        )
+        val floatingKeyboardWidthPercentLandscape = int(
+            R.string.floating_keyboard_width_percent_landscape,
+            "floating_keyboard_width_percent_landscape",
+            90,
+            30,
+            100,
+            "%",
+            5
+        )
+        val floatingAutoKeyboardMode = enumList(
+            R.string.floating_auto_keyboard_mode,
+            "floating_auto_keyboard_mode",
+            FloatingAutoMode.Off
         )
         val spaceSwipeMoveCursor =
             switch(R.string.space_swipe_move_cursor, "space_swipe_move_cursor", true)

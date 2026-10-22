@@ -296,7 +296,9 @@ class KawaiiBarComponent : UniqueViewComponent<KawaiiBarComponent, FrameLayout>(
     }
 
     private val idleUi: IdleUi by lazy {
-        IdleUi(context, theme, popup, commonKeyActionListener).apply {
+        IdleUi(context, theme, popup, commonKeyActionListener) {
+            service.toggleFloatingKeyboard()
+        }.apply {
             menuButton.setOnClickListener {
                 when (idleUi.currentState) {
                     IdleUi.State.Empty -> {

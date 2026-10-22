@@ -398,4 +398,14 @@
     <string name="voice_error_audio_not_init">AudioRecord not initialized</string>
     <string name="voice_error_audio_start_failed">startRecording failed: %s</string>
     <string name="voice_hold_requires_plugin">Hold-to-talk requires a voice input plugin selected in "Preferred voice input"</string>
+
+    <!-- Floating keyboard -->
+    <string name="floating_keyboard">Floating keyboard</string>
+    <string name="floating_keyboard_width_percent_portrait">Floating keyboard width (portrait)</string>
+    <string name="floating_keyboard_width_percent_landscape">Floating keyboard width (landscape)</string>
+    <string name="floating_auto_keyboard_mode">Auto floating keyboard</string>
+    <string name="floating_auto_mode_off">Off</string>
+    <string name="floating_auto_mode_portrait">Portrait only</string>
+    <string name="floating_auto_mode_landscape">Landscape only</string>
+    <string name="floating_auto_mode_always">Portrait and landscape</string>
 </resources>

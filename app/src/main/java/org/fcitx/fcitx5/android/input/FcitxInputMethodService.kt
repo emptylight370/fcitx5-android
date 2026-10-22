@@ -185,6 +185,10 @@ class FcitxInputMethodService : LifecycleInputMethodService() {
         return newInputView
     }
 
+    internal fun toggleFloatingKeyboard() {
+        inputView?.toggleFloatingMode()
+    }
+
     private fun replaceCandidateView(theme: Theme): CandidatesView {
         val newCandidatesView = CandidatesView(this, fcitx, theme)
         // replace CandidatesView manually
