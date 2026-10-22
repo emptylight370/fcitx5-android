@@ -1,0 +1,5 @@
+[tools]
+java = "25"
+
+[env]
+ANDROID_HOME = "{{ get_env(name='LOCALAPPDATA') }}\\Android\\Sdk"
