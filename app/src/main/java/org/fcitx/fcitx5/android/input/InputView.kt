@@ -367,28 +367,37 @@ class InputView(
     }
 
     private fun updateKeyboardSize() {
+        // Only the key area scales; the toolbar keeps its fixed height so its
+        // buttons stay usable
         val heightPx: Int
         if (isFloating) {
-            // Proportional scaling: keep the docked keyboard's default
-            // width/height aspect ratio for the configured floating width,
-            // so the keyboard keeps its shape at any width.
-            val dockedWidth = resources.displayMetrics.widthPixels
-            val scale = if (dockedWidth > 0) resolveFloatingWidth().toFloat() / dockedWidth else 1f
-            heightPx = (keyboardHeightPx * scale).toInt()
-            windowManager.view.updateLayoutParams {
-                height = heightPx
+            // Scale relative to the PORTRAIT docked keyboard's aspect ratio,
+            // so landscape floating keyboards keep a usable key height
+            val dm = resources.displayMetrics
+            val portraitScreenWidth = minOf(dm.widthPixels, dm.heightPixels)
+            val portraitScreenHeight = maxOf(dm.widthPixels, dm.heightPixels)
+            val base = when (keyboardHeightPercentBase.getValue()) {
+                DisplayMetrics -> portraitScreenHeight
+                RealSize -> Point().also {
+                    @Suppress("DEPRECATION")
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                        context.display
+                    } else {
+                        context.windowManager.defaultDisplay
+                    }.getRealSize(it)
+                }.let { maxOf(it.x, it.y) }
             }
-            kawaiiBar.view.updateLayoutParams {
-                height = (dp(KawaiiBarComponent.HEIGHT) * scale).toInt()
-            }
+            val portraitKeyHeight = base * keyboardHeightPercent.getValue() / 100
+            heightPx = (resolveFloatingWidth().toFloat() * portraitKeyHeight / portraitScreenWidth)
+                .toInt()
         } else {
             heightPx = keyboardHeightPx
-            windowManager.view.updateLayoutParams {
-                height = heightPx
-            }
-            kawaiiBar.view.updateLayoutParams {
-                height = dp(KawaiiBarComponent.HEIGHT)
-            }
+        }
+        windowManager.view.updateLayoutParams {
+            height = heightPx
+        }
+        kawaiiBar.view.updateLayoutParams {
+            height = dp(KawaiiBarComponent.HEIGHT)
         }
         bottomPaddingSpace.updateLayoutParams {
             height = keyboardBottomPaddingPx
