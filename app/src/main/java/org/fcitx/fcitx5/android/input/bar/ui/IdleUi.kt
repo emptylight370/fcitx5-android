@@ -79,15 +79,9 @@ class IdleUi(
 
     val hideKeyboardButton = ToolButton(ctx, R.drawable.ic_baseline_arrow_drop_down_24, theme)
 
-    val floatingButton = ToolButton(ctx, R.drawable.ic_floating_toggle_24, theme).apply {
-        contentDescription = ctx.getString(R.string.floating_keyboard)
-        setOnClickListener { floatingToggleCallback?.invoke() }
-        visibility = if (floatingToggleCallback != null) View.VISIBLE else View.GONE
-    }
-
     val emptyBar = Space(ctx)
 
-    val buttonsUi = ButtonsBarUi(ctx, theme)
+    val buttonsUi = ButtonsBarUi(ctx, theme, floatingToggleCallback)
 
     val clipboardUi = ClipboardSuggestionUi(ctx, theme)
 
@@ -131,12 +125,8 @@ class IdleUi(
             endOfParent()
             centerVertically()
         })
-        add(floatingButton, lParams(size, size) {
-            endToStartOf(menuButton)
-            centerVertically()
-        })
         add(animator, lParams(matchConstraints, matchParent) {
-            after(floatingButton)
+            after(menuButton)
             before(hideKeyboardButton)
             centerVertically()
         })

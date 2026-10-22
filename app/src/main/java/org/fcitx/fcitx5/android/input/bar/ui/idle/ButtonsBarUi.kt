@@ -5,6 +5,7 @@
 package org.fcitx.fcitx5.android.input.bar.ui.idle
 
 import android.content.Context
+import android.view.View
 import androidx.annotation.DrawableRes
 import com.google.android.flexbox.AlignItems
 import com.google.android.flexbox.FlexboxLayout
@@ -16,7 +17,11 @@ import splitties.dimensions.dp
 import splitties.views.dsl.core.Ui
 import splitties.views.dsl.core.view
 
-class ButtonsBarUi(override val ctx: Context, private val theme: Theme) : Ui {
+class ButtonsBarUi(
+    override val ctx: Context,
+    private val theme: Theme,
+    private val floatingToggleCallback: (() -> Unit)? = null
+) : Ui {
 
     override val root = view(::FlexboxLayout) {
         alignItems = AlignItems.CENTER
@@ -42,6 +47,12 @@ class ButtonsBarUi(override val ctx: Context, private val theme: Theme) : Ui {
 
     val clipboardButton = toolButton(R.drawable.ic_clipboard).apply {
         contentDescription = ctx.getString(R.string.clipboard)
+    }
+
+    val floatingButton = toolButton(R.drawable.ic_floating_toggle_24).apply {
+        contentDescription = ctx.getString(R.string.floating_keyboard)
+        setOnClickListener { floatingToggleCallback?.invoke() }
+        visibility = if (floatingToggleCallback != null) View.VISIBLE else View.GONE
     }
 
     val moreButton = toolButton(R.drawable.ic_baseline_more_horiz_24).apply {
