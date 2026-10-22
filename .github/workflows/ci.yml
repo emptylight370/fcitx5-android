@@ -72,18 +72,36 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt update
-          sudo apt install extra-cmake-modules gettext
+          sudo apt install extra-cmake-modules gettext ccache
+
+      - name: Compute native sources hash
+        id: native_hash
+        shell: bash
+        run: |
+          submodules=$(git submodule status | awk '{print $1 $2}' | sha256sum | cut -d' ' -f1)
+          echo "value=$submodules" >> "$GITHUB_OUTPUT"
+
+      - name: Setup ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: ccache-${{ matrix.build_type }}-${{ steps.native_hash.outputs.value }}-${{ hashFiles('app/src/main/cpp/**', 'plugin/*/src/main/cpp/**') }}
+          restore-keys: ccache-${{ matrix.build_type }}-
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
 
       - name: Build Standard APK
         if: matrix.build_type == 'standard'
+        env:
+          NDK_CCACHE: ccache
         run: |
           ./gradlew :app:assembleRelease
 
       - name: Build Plugins APK
         if: matrix.build_type == 'plugins'
+        env:
+          NDK_CCACHE: ccache
         run: |
           ./gradlew :assembleReleasePlugins
 
