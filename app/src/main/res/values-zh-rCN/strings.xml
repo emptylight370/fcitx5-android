@@ -401,8 +401,7 @@
 
     <!-- 悬浮键盘 -->
     <string name="floating_keyboard">悬浮键盘</string>
-    <string name="floating_keyboard_width_percent_portrait">悬浮键盘宽度（竖屏）</string>
-    <string name="floating_keyboard_width_percent_landscape">悬浮键盘宽度（横屏）</string>
+    <string name="floating_keyboard_width">悬浮键盘宽度</string>
     <string name="floating_auto_keyboard_mode">自动悬浮键盘</string>
     <string name="floating_auto_mode_off">关闭</string>
     <string name="floating_auto_mode_portrait">仅竖屏</string>

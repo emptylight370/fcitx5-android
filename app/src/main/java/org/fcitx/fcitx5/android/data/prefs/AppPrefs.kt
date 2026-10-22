@@ -190,29 +190,6 @@ class AppPrefs(private val sharedPreferences: SharedPreferences) {
             "space_long_press_behavior",
             SpaceLongPressBehavior.None
         )
-        val floatingKeyboardWidthPercentPortrait = int(
-            R.string.floating_keyboard_width_percent_portrait,
-            "floating_keyboard_width_percent_portrait",
-            80,
-            30,
-            100,
-            "%",
-            5
-        )
-        val floatingKeyboardWidthPercentLandscape = int(
-            R.string.floating_keyboard_width_percent_landscape,
-            "floating_keyboard_width_percent_landscape",
-            40,
-            30,
-            100,
-            "%",
-            5
-        )
-        val floatingAutoKeyboardMode = enumList(
-            R.string.floating_auto_keyboard_mode,
-            "floating_auto_keyboard_mode",
-            FloatingAutoMode.Off
-        )
         val spaceSwipeMoveCursor =
             switch(R.string.space_swipe_move_cursor, "space_swipe_move_cursor", true)
         val showLangSwitchKey =
@@ -282,6 +259,33 @@ class AppPrefs(private val sharedPreferences: SharedPreferences) {
             keyboardBottomPadding = primary
             keyboardBottomPaddingLandscape = secondary
         }
+
+        val floatingKeyboardWidthPercentPortrait: ManagedPreference.PInt
+        val floatingKeyboardWidthPercentLandscape: ManagedPreference.PInt
+
+        init {
+            val (primary, secondary) = twinInt(
+                R.string.floating_keyboard_width,
+                R.string.portrait,
+                "floating_keyboard_width_percent_portrait",
+                80,
+                R.string.landscape,
+                "floating_keyboard_width_percent_landscape",
+                40,
+                30,
+                100,
+                "%",
+                5
+            )
+            floatingKeyboardWidthPercentPortrait = primary
+            floatingKeyboardWidthPercentLandscape = secondary
+        }
+
+        val floatingAutoKeyboardMode = enumList(
+            R.string.floating_auto_keyboard_mode,
+            "floating_auto_keyboard_mode",
+            FloatingAutoMode.Off
+        )
 
         val horizontalCandidateStyle = enumList(
             R.string.horizontal_candidate_style,

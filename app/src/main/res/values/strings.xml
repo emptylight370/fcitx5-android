@@ -401,8 +401,7 @@
 
     <!-- Floating keyboard -->
     <string name="floating_keyboard">Floating keyboard</string>
-    <string name="floating_keyboard_width_percent_portrait">Floating keyboard width (portrait)</string>
-    <string name="floating_keyboard_width_percent_landscape">Floating keyboard width (landscape)</string>
+    <string name="floating_keyboard_width">Floating keyboard width</string>
     <string name="floating_auto_keyboard_mode">Auto floating keyboard</string>
     <string name="floating_auto_mode_off">Off</string>
     <string name="floating_auto_mode_portrait">Portrait only</string>

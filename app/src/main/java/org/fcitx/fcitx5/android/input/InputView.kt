@@ -417,6 +417,8 @@ class InputView(
             // hide side padding space views when unnecessary
             leftPaddingSpace.visibility = GONE
             rightPaddingSpace.visibility = GONE
+            // restore bottom padding hidden by floating mode
+            bottomPaddingSpace.visibility = VISIBLE
             windowManager.view.updateLayoutParams<LayoutParams> {
                 startToEnd = unset
                 endToStart = unset
@@ -426,6 +428,8 @@ class InputView(
         } else {
             leftPaddingSpace.visibility = VISIBLE
             rightPaddingSpace.visibility = VISIBLE
+            // restore bottom padding hidden by floating mode
+            bottomPaddingSpace.visibility = VISIBLE
             leftPaddingSpace.updateLayoutParams {
                 width = sidePadding
             }
