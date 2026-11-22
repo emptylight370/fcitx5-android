@@ -275,7 +275,7 @@ class AppPrefs(private val sharedPreferences: SharedPreferences) {
                 30,
                 100,
                 "%",
-                5
+                1
             )
             floatingKeyboardWidthPercentPortrait = primary
             floatingKeyboardWidthPercentLandscape = secondary

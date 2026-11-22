@@ -371,6 +371,14 @@ class InputView(
         // buttons stay usable
         val heightPx: Int
         if (isFloating) {
+            // The floating keyboard always uses the PORTRAIT docked aspect
+            // ratio; adjusting the width setting resizes the whole keyboard.
+            // Width must be applied here too, since this is also called when
+            // the width setting changes while floating.
+            val floatingWidth = resolveFloatingWidth()
+            keyboardView.updateLayoutParams<ConstraintLayout.LayoutParams> {
+                width = floatingWidth
+            }
             // Scale relative to the PORTRAIT docked keyboard's aspect ratio,
             // so landscape floating keyboards keep a usable key height
             val dm = resources.displayMetrics
@@ -388,7 +396,7 @@ class InputView(
                 }.let { maxOf(it.x, it.y) }
             }
             val portraitKeyHeight = base * keyboardHeightPercent.getValue() / 100
-            heightPx = (resolveFloatingWidth().toFloat() * portraitKeyHeight / portraitScreenWidth)
+            heightPx = (floatingWidth.toFloat() * portraitKeyHeight / portraitScreenWidth)
                 .toInt()
         } else {
             heightPx = keyboardHeightPx
